@@ -1,7 +1,11 @@
 import sys
 from abc import ABC, abstractmethod
 
-from pydivert import WinDivert, Packet
+from pydivert import WinDivert
+from pydivert.packet import Packet
+from logger_setup import get_logger
+
+log = get_logger("injecter")
 
 
 # from pydivert.consts import *
@@ -31,7 +35,11 @@ class TcpInjector(ABC):
         sys.exit("Not implemented")
 
     def run(self):
+        log.info("WinDivert injector started")
         with self.w:
             while True:
-                packet = self.w.recv(65575)
-                self.inject(packet)
+                try:
+                    packet = self.w.recv(65575)
+                    self.inject(packet)
+                except Exception as exc:
+                    log.error("Injector recv/inject error: %s", exc, exc_info=True)

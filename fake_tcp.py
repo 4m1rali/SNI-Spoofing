@@ -4,10 +4,13 @@ import sys
 import threading
 import time
 
-from pydivert import Packet
+from pydivert.packet import Packet
 
 from monitor_connection import MonitorConnection
 from injecter import TcpInjector
+from logger_setup import get_logger
+
+log = get_logger("fake_tcp")
 
 
 class FakeInjectiveConnection(MonitorConnection):
@@ -55,12 +58,15 @@ class FakeTcpInjector(TcpInjector):
                 sys.exit("not implemented method!")
 
     def on_unexpected_packet(self, packet: Packet, connection: FakeInjectiveConnection, info_m: str):
-        print(info_m, packet)
+        log.warning("Unexpected packet [%s:%d -> %s:%d]: %s",
+                    connection.src_ip, connection.src_port,
+                    connection.dst_ip, connection.dst_port, info_m)
+        log.debug("Packet details: %s", packet)
         connection.sock.close()
         connection.peer_sock.close()
         connection.monitor = False
         connection.t2a_msg = "unexpected_close"
-        connection.running_loop.call_soon_threadsafe(connection.t2a_event.set, )
+        connection.running_loop.call_soon_threadsafe(connection.t2a_event.set)
         self.w.send(packet, False)
 
     def on_inbound_packet(self, packet: Packet, connection: FakeInjectiveConnection):
@@ -174,4 +180,5 @@ class FakeTcpInjector(TcpInjector):
                         return
                     self.on_outbound_packet(packet, connection)
         else:
+            log.error("Packet with impossible direction — dropping")
             sys.exit("impossible direction!")
