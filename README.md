@@ -150,6 +150,7 @@ Only packets on the specific local↔target path are intercepted. All other traf
 
 - Main thread: `asyncio` event loop — accepts connections, manages relay tasks
 - WinDivert thread: daemon thread — intercepts and injects packets synchronously
+- Thread pool (32 workers): shared pool for fake-send tasks — replaces spawning a new OS thread per connection
 - Communication: `asyncio.Event` (`t2a_event`) signals from WinDivert thread to async loop when bypass handshake completes
 
 ### Credits
@@ -193,11 +194,13 @@ Output: `dist\main.exe` — copy `config.json` next to it.
 
 ```json
 {
-  "LISTEN_HOST": "0.0.0.0",
-  "LISTEN_PORT": 40443,
-  "FAKE_SNI": "mci.ir",
-  "CONNECT_IP": "104.19.229.21",
-  "CONNECT_PORT": 443
+  "LISTEN_HOST":    "0.0.0.0",
+  "LISTEN_PORT":    40443,
+  "FAKE_SNI":       "hcaptcha.com",
+  "CONNECT_IP":     "104.19.229.21",
+  "CONNECT_PORT":   443,
+  "LOG_CLIENT_SNI": true,
+  "LOG_FILE":       ""
 }
 ```
 
@@ -208,22 +211,33 @@ Output: `dist\main.exe` — copy `config.json` next to it.
 | `FAKE_SNI` | The spoofed SNI domain sent to fool DPI (use a whitelisted domain) |
 | `CONNECT_IP` | Target server IP to connect to |
 | `CONNECT_PORT` | Target server port (usually `443`) |
+| `LOG_CLIENT_SNI` | `true` — log the real destination SNI from each client's TLS hello |
+| `LOG_FILE` | Path to write plain-text log file (e.g. `"sni.log"`). Empty = disabled |
 
 ### Project Structure
 
 ```
 SNI-Spoofing/
-├── main.py                 # Entry point, async relay loop
-├── fake_tcp.py             # FakeInjectiveConnection & FakeTcpInjector
-├── injecter.py             # Abstract WinDivert packet injector base
-├── monitor_connection.py   # TCP connection state tracker
-├── logger_setup.py         # Colored logging setup
-├── config.json             # Runtime configuration
-├── main.spec               # PyInstaller build spec
-├── requirements.txt        # Python dependencies
-└── utils/
-    ├── network_tools.py    # Network interface helpers
-    └── packet_templates.py # TLS ClientHello / ServerHello builders
+├── main.py                      # Entry point — admin check, bootstrap, accept loop
+├── logger_setup.py              # Colored logging, WinError 6 suppression
+├── config.json                  # Runtime configuration
+├── main.spec                    # PyInstaller build spec
+├── requirements.txt             # Python dependencies
+│
+├── core/                        # Application core
+│   ├── config.py                # Config dataclass + loader
+│   ├── connection.py            # MonitorConnection — TCP state tracker
+│   ├── relay.py                 # Async relay loop + handle()
+│   └── stats.py                 # Thread-safe connection statistics
+│
+├── bypass/                      # DPI bypass engine
+│   ├── injector.py              # Abstract WinDivert injector base
+│   └── fake_tcp.py              # FakeInjectiveConnection + FakeTcpInjector
+│
+└── utils/                       # Shared utilities
+    ├── network_tools.py         # Interface IP detection
+    ├── packet_templates.py      # TLS ClientHello builder (cached)
+    └── sni_extractor.py         # Parse real SNI from client TLS hello
 ```
 
 ### Support the Developer

@@ -1,7 +1,10 @@
 {
-  "LISTEN_HOST": "0.0.0.0",
-  "LISTEN_PORT": 40443,
-  "CONNECT_IP": "104.19.229.21",
-  "CONNECT_PORT": 443,
-  "FAKE_SNI": "hcaptcha.com"
+  "LISTEN_HOST":    "0.0.0.0",
+  "LISTEN_PORT":    40443,
+  "CONNECT_IP":     "104.19.229.21",
+  "CONNECT_PORT":   443,
+  "FAKE_SNI":       "hcaptcha.com",
+
+  "LOG_CLIENT_SNI": true,
+  "LOG_FILE":       ""
 }

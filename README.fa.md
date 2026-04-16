@@ -157,6 +157,7 @@ tcp and (
 
 - ترد اصلی: حلقه رویداد `asyncio` — پذیرش اتصال‌ها، مدیریت تسک‌های رله
 - ترد WinDivert: ترد daemon — رهگیری و تزریق پکت‌ها به صورت همگام
+- Thread Pool (32 worker): جایگزین spawning ترد جداگانه برای هر اتصال — overhead کمتر
 - ارتباط: `asyncio.Event` (`t2a_event`) از ترد WinDivert به حلقه async سیگنال می‌دهد
 
 ---
@@ -208,11 +209,13 @@ python -m PyInstaller main.spec
 
 ```json
 {
-  "LISTEN_HOST": "0.0.0.0",
-  "LISTEN_PORT": 40443,
-  "FAKE_SNI": "mci.ir",
-  "CONNECT_IP": "104.19.229.21",
-  "CONNECT_PORT": 443
+  "LISTEN_HOST":    "0.0.0.0",
+  "LISTEN_PORT":    40443,
+  "FAKE_SNI":       "hcaptcha.com",
+  "CONNECT_IP":     "104.19.229.21",
+  "CONNECT_PORT":   443,
+  "LOG_CLIENT_SNI": true,
+  "LOG_FILE":       ""
 }
 ```
 
@@ -223,6 +226,8 @@ python -m PyInstaller main.spec
 | `FAKE_SNI` | دامنه جعلی برای فریب DPI (باید فیلتر نشده باشد) |
 | `CONNECT_IP` | IP سرور مقصد |
 | `CONNECT_PORT` | پورت سرور مقصد (معمولاً ۴۴۳) |
+| `LOG_CLIENT_SNI` | `true` — لاگ کردن SNI واقعی از TLS hello کلاینت |
+| `LOG_FILE` | مسیر فایل لاگ متنی (مثل `"sni.log"`). خالی = غیرفعال |
 
 ---
 
@@ -230,17 +235,26 @@ python -m PyInstaller main.spec
 
 ```
 SNI-Spoofing/
-├── main.py                 # نقطه ورود، حلقه رله ناهمگام
-├── fake_tcp.py             # FakeInjectiveConnection و FakeTcpInjector
-├── injecter.py             # کلاس پایه انتزاعی WinDivert
-├── monitor_connection.py   # ردیاب وضعیت اتصال TCP
-├── logger_setup.py         # تنظیم لاگ رنگی
-├── config.json             # تنظیمات اجرا
-├── main.spec               # اسپک بیلد PyInstaller
-├── requirements.txt        # وابستگی‌های Python
-└── utils/
-    ├── network_tools.py    # ابزارهای کمکی شبکه
-    └── packet_templates.py # سازنده TLS ClientHello / ServerHello
+├── main.py                      # نقطه ورود — بررسی admin، بوت‌استرپ، حلقه accept
+├── logger_setup.py              # لاگ رنگی، فیلتر WinError 6
+├── config.json                  # تنظیمات اجرا
+├── main.spec                    # اسپک بیلد PyInstaller
+├── requirements.txt             # وابستگی‌های Python
+│
+├── core/                        # هسته برنامه
+│   ├── config.py                # Config dataclass + بارگذاری تنظیمات
+│   ├── connection.py            # MonitorConnection — ردیاب وضعیت TCP
+│   ├── relay.py                 # حلقه رله ناهمگام + handle()
+│   └── stats.py                 # آمار اتصال thread-safe
+│
+├── bypass/                      # موتور دور زدن DPI
+│   ├── injector.py              # کلاس پایه انتزاعی WinDivert
+│   └── fake_tcp.py              # FakeInjectiveConnection + FakeTcpInjector
+│
+└── utils/                       # ابزارهای مشترک
+    ├── network_tools.py         # تشخیص IP اینترفیس شبکه
+    ├── packet_templates.py      # سازنده TLS ClientHello (کش شده)
+    └── sni_extractor.py         # استخراج SNI واقعی از TLS hello کلاینت
 ```
 
 ---
