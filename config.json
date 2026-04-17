@@ -1,10 +1,24 @@
 {
-  "LISTEN_HOST":    "0.0.0.0",
-  "LISTEN_PORT":    40443,
-  "CONNECT_IP":     "104.19.229.21",
-  "CONNECT_PORT":   443,
-  "FAKE_SNI":       "hcaptcha.com",
+  "LISTEN_HOST":      "0.0.0.0",
+  "LISTEN_PORT":      40443,
+  "CONNECT_IP":       "104.19.229.21",
+  "CONNECT_PORT":     443,
+  "FAKE_SNI":         "hcaptcha.com",
 
-  "LOG_CLIENT_SNI": true,
-  "LOG_FILE":       ""
+  "BYPASS_TIMEOUT":   2.0,
+  "FAKE_DELAY_MS":    1.0,
+  "CONNECT_TIMEOUT":  5.0,
+
+  "RECV_BUFFER":      65536,
+  "MAX_CONNECTIONS":  0,
+  "IDLE_TIMEOUT":     120,
+  "RATE_LIMIT":       0,
+
+  "BROWSER_PROFILE":  "random",
+  "TTL_SPOOF":        true,
+
+  "LOG_LEVEL":        "INFO",
+  "LOG_CLIENT_SNI":   true,
+  "LOG_FILE":         "",
+  "STATS_INTERVAL":   60
 }
